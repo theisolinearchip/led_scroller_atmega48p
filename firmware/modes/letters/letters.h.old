@@ -1,0 +1,105 @@
+// unused old version for the letters mode. Instead of using a pair of initial offset + string length a dynamic buffer was allocated when sending
+// the full buffer on a single command (this was replaced for a fixed long buffer + offset + string length, so longest strings can be splitted up
+// and sent using smallest commands - useful when dealing with the standard Arduino Wire.h library, 'cause it uses a 32 bytes internal buffer!)
+
+#include "letters_constants.h"
+#include <stdlib.h>
+
+#define LT_OFFSET_INIT		(CP_COLUMNS - 1)
+
+#define LT_MAX_BUFFER 		60			// going over the buffer will truncate it to this number;
+										// sending more characters will override the first ones when the twi_current_remaining_bytes
+										// became greater than the current max buffer size
+
+// buffer must be already init with proper length
+// (this is useful to hardcode a buffer instead of adding char-by-char)
+#define letters_set_buffer(a) memcpy((char *)lt_str_ptr, a, lt_str_size);
+
+static int lt_str_cursor = 0;			// current string cursor position when drawing letters (needs to be combined with the offset to get the absolute position in the matrix)
+static int lt_offset = 0;				// offset in the matrix to start drawing (can be < 0 or >= CP_COLUMNS)
+
+volatile char *lt_str_ptr;				// string buffer
+volatile int lt_str_size = 0;			// string size
+
+volatile char lt_scroll = 1; 			// 1: scroll text, 0: static (starts at left)
+
+static int lt_copy_letter(int l) {
+	if (l >= lt_str_size) return -1;
+
+	for (int i = 0; i < LETTERS_WIDTH; i++) {
+
+		if (lt_str_cursor + lt_offset + i < 0) { // draw only if the current column is inside the matrix
+			continue;
+		}
+
+		if (lt_str_cursor + lt_offset + i >= CP_COLUMNS) { // if we're about to draw something over the max CP_COLUMNS stop doing that, we just reached the end of the matrix
+			lt_str_cursor += i;
+			return -1;
+		}
+
+		// our ascii table starts at SPACE (32, ' ') and goes up to ~ (126) so anytwhing between is a) valid and b) an offset from ' '
+		if ((lt_str_ptr[l] >= ' ') & (lt_str_ptr[l] <= '~')) {
+			leds_status[lt_str_cursor + lt_offset + i] = pgm_read_byte(letters + ( (lt_str_ptr[l] - ' ') * LETTERS_WIDTH ) + i);
+		} else {
+			// other characters will be replaced by space
+			leds_status[lt_str_cursor + lt_offset + i] = pgm_read_byte(letters + ( (0) * LETTERS_WIDTH ) + i);
+		}
+	}
+
+	lt_str_cursor += LETTERS_WIDTH;
+
+	// after drawing the letter, add an empty column if we're still in the matrix bounds (doesn't matter if it's the last character, do it anyway)
+	if ((lt_str_cursor + lt_offset + 1 >= 0) && (lt_str_cursor + lt_offset + 1 < CP_COLUMNS)) {
+		leds_status[lt_str_cursor + lt_offset + 1] = 0x00;
+		++lt_str_cursor;
+	}	
+
+	return 1;
+}
+
+void letters_init_buffer(int size) {
+	free((char *)lt_str_ptr);
+
+	if (size > LT_MAX_BUFFER) size = LT_MAX_BUFFER;
+
+	lt_str_size = size;
+	lt_str_ptr = malloc(size);
+
+	if (lt_str_ptr == NULL) {
+		// something bad happened...
+		lt_str_size = 0;
+	}
+}
+
+void letters_set_buffer_char(char a, int pos) {
+	if (pos < lt_str_size) lt_str_ptr[pos] = a;
+}
+
+void letters_init() {
+	lt_str_cursor = 0;
+	lt_scroll = 1; // TODO: do not override scroll when init!
+	lt_offset = LT_OFFSET_INIT;
+}
+
+void letters_step() {
+
+	if (!lt_scroll) lt_offset = 0;
+
+	lt_str_cursor = 0;
+
+	// set columns to 0
+	for (int i = 0; i < CP_COLUMNS; i++) {
+		leds_status[i] = 0;
+	}
+
+	// start copying the string to the cursor position
+	for (int i = 0; i < lt_str_size; i++) {
+		if (lt_copy_letter(i) < 0) break;
+	}
+
+	// if the offset is >= the string total length, reset to start looping again
+	if (--lt_offset * -1 >= lt_str_size * LETTERS_WIDTH) {
+		lt_offset = LT_OFFSET_INIT;
+	}
+
+} 
