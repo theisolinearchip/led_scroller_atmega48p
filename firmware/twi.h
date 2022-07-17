@@ -23,7 +23,7 @@
 
 #define twi_reset_currents() 			twi_current_processing_command = 0; twi_current_remaining_bytes = 0;
 #define twi_reset_TWCR_ACK()			TWCR = (1 << TWIE) | (1 << TWINT) | (1 << TWEA) | (1 << TWEN);
-#define twi_reset_TWCR_NACK() 			TWCR = ((1 << TWIE) | (1 << TWINT) | (1 << TWEN)) & ~(1 << TWEA); // same as ACK but with TWEA = 1
+#define twi_reset_TWCR_NACK() 			TWCR = ((1 << TWIE) | (1 << TWINT) | (1 << TWEN)) & ~(1 << TWEA); // same as ACK but with TWEA = 0
 
 volatile char twi_data_recieved = 0;
 
