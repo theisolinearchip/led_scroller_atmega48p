@@ -1,6 +1,6 @@
 # Led Scroller Matrix atmega48-based
 
-This is the firmware for a [led scroller matrix I made](https://hackaday.io/project/186372-led-scroller-matrix-atmega48-based) using an atmega48p and some charliplexing techniques (check my page on [hackaday.io](https://hackaday.io/project/186372-led-scroller-matrix-atmega48-based) for more info about the project and the board itself).
+This is the firmware for a [led scroller matrix I made](https://hackaday.io/project/186372-led-scroller-matrix-atmega48-based) using an atmega48p and some charliplexing techniques (check my page on [hackaday.io](https://hackaday.io/project/186372-led-scroller-matrix-atmega48-based) for more info about the project and the board itself; also here's [a video with the demo program](https://twitter.com/isolinearchip/status/1548760453035266049)!).
 
 ![Led scroller 1](http://albertgonzalez.coffee/projects/led_scroller_atmega48p/img/1_1000.png)
 
